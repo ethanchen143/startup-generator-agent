@@ -64,6 +64,30 @@ async def run_pipeline_now():
     asyncio.create_task(pipeline_scheduler.trigger_pipeline(is_manual=True))
     return {"message": "Pipeline run triggered asynchronously"}
 
+# ----------------- HITL & MEMORY ENDPOINTS -----------------
+
+@app.get("/api/hitl/pending")
+async def get_pending_hitl():
+    from backend.hitl import hitl_manager
+    return hitl_manager.pending_approvals
+
+@app.post("/api/hitl/approve/{approval_id}")
+async def approve_hitl(approval_id: str):
+    from backend.hitl import hitl_manager
+    success = hitl_manager.approve_step(approval_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Approval ID not found")
+    return {"status": "success", "message": f"Approved step {approval_id}"}
+
+@app.get("/api/memory/{project_id}")
+async def get_session_memory(project_id: str):
+    from backend.memory import session_store
+    session = session_store.load_session(project_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session memory not found")
+    return session
+
+
 # ----------------- STARTUP IDEAS & FILE ENDPOINTS -----------------
 
 @app.get("/api/ideas", response_model=List[StartupIdeaPackage])

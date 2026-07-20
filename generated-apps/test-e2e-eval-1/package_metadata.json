@@ -1,0 +1,115 @@
+{
+  "project_id": "test-e2e-eval-1",
+  "timestamp": "2026-07-20T15:45:53.625716Z",
+  "discovery": {
+    "project_id": "test-e2e-eval-1",
+    "timestamp": "2026-07-20T15:45:53.625716Z",
+    "target_industry": "Sustainable Supply Chain Analytics for Micro-Brands",
+    "uncovered_pain_point": "Fragmented manual processes and lack of real-time telemetry streaming in Sustainable Supply Chain Analytics for Micro-Brands.",
+    "target_demographic": "Operations Managers and SMB Founders",
+    "opportunity_score": 8.7,
+    "search_queries_used": [
+      "Sustainable Supply Chain Analytics for Micro-Brands pain points",
+      "market gaps 2026"
+    ]
+  },
+  "market_research": {
+    "project_id": "test-e2e-eval-1",
+    "competitors": [
+      {
+        "name": "LegacyCorp Analytics",
+        "url": "https://legacycorp.example.com",
+        "key_weakness": "Clunky static UI, expensive enterprise lock-in",
+        "market_share_estimate": "35%"
+      },
+      {
+        "name": "ManualSheet Tools",
+        "url": "https://manualsheet.example.com",
+        "key_weakness": "Requires manual export, no automated workflow",
+        "market_share_estimate": "25%"
+      }
+    ],
+    "market_size_tam": "$4.5 Billion",
+    "market_size_sam": "$850 Million",
+    "key_market_trends": [
+      "Shift toward real-time telemetry",
+      "Demand for low-code automation",
+      "API-first integration"
+    ],
+    "target_persona_insights": "Mid-market team leads seeking instant visibility without complex 6-month deployment cycles.",
+    "differentiation_angle": "Real-time WebSocket event streaming paired with single-click interactive prototype execution."
+  },
+  "product_spec": {
+    "project_id": "test-e2e-eval-1",
+    "app_name": "SustainableFlow AI",
+    "tagline": "Next-Generation Autonomous Engine for Sustainable Supply Chain Analytics for Micro-Brands",
+    "value_proposition": "Transform raw operational friction in Sustainable Supply Chain Analytics for Micro-Brands into real-time interactive intelligence.",
+    "core_feature_list": [
+      {
+        "feature_name": "Live Telemetry Dashboard",
+        "description": "Real-time event stream monitoring and status metrics.",
+        "priority": "HIGH"
+      },
+      {
+        "feature_name": "Automated Opportunity Radar",
+        "description": "AI agent recommendation feed highlighting high-value gaps.",
+        "priority": "HIGH"
+      },
+      {
+        "feature_name": "One-Click Workspace Export",
+        "description": "Export generated manifests and source code instantly.",
+        "priority": "MEDIUM"
+      }
+    ],
+    "ui_ux_requirements": {
+      "color_palette": [
+        "#0f172a",
+        "#3b82f6",
+        "#10b981",
+        "#8b5cf6"
+      ],
+      "layout_style": "Modern High-Tech Cyberpunk Dashboard",
+      "typography_vibe": "Clean Inter / Roboto Sans"
+    },
+    "data_model_sketch": [
+      "ProjectRecord",
+      "TraceEvent",
+      "MarketMetric",
+      "UserWorkspace"
+    ]
+  },
+  "build_artifact": {
+    "project_id": "test-e2e-eval-1",
+    "workspace_path": "/Users/ethanjchen/Desktop/5-days-agent/generated-apps/test-e2e-eval-1",
+    "live_preview_url": "/preview/test-e2e-eval-1/index.html",
+    "file_manifest": [
+      {
+        "file_path": "index.html",
+        "file_size_bytes": 1177,
+        "file_type": "html"
+      },
+      {
+        "file_path": "styles.css",
+        "file_size_bytes": 1518,
+        "file_type": "css"
+      },
+      {
+        "file_path": "package.json",
+        "file_size_bytes": 341,
+        "file_type": "json"
+      },
+      {
+        "file_path": "package_metadata.json",
+        "file_size_bytes": 3762,
+        "file_type": "json"
+      },
+      {
+        "file_path": "src/App.jsx",
+        "file_size_bytes": 6159,
+        "file_type": "jsx"
+      }
+    ],
+    "build_status": "SUCCESS",
+    "generation_time_seconds": 0.0
+  }
+}

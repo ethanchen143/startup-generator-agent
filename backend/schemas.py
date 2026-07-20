@@ -1,6 +1,7 @@
+import uuid
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, timezone
 
 class CompetitorInfo(BaseModel):
     name: str
@@ -59,12 +60,12 @@ class AppBuildArtifact(BaseModel):
     generation_time_seconds: float = 0.0
 
 class TraceEvent(BaseModel):
-    event_id: str
+    event_id: str = Field(default_factory=lambda: f"evt-{uuid.uuid4().hex[:8]}")
     project_id: str
     agent_name: str  # Discovery, MarketResearch, Ideation, Implementation, System
     event_type: str  # THOUGHT, TOOL_QUERY, TOOL_EXECUTION, STATUS_CHANGE
     content: str
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class PipelineStatusResponse(BaseModel):
     is_pipeline_active: bool

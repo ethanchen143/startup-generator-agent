@@ -3,84 +3,113 @@ import json
 from pathlib import Path
 from typing import List, Dict, Any
 from backend.config import GENERATED_APPS_DIR
-from backend.schemas import FileManifestItem, AppBuildArtifact
+from backend.schemas import FileManifestItem
 
 def get_project_dir(project_id: str) -> Path:
+    if not project_id or not isinstance(project_id, str):
+        raise ValueError("Invalid or empty project_id provided.")
     target_dir = (GENERATED_APPS_DIR / project_id).resolve()
     # Security check: Ensure target_dir is strictly inside GENERATED_APPS_DIR
     if not str(target_dir).startswith(str(GENERATED_APPS_DIR.resolve())):
-        raise ValueError(f"Invalid path traversal attempt for project_id: {project_id}")
+        raise ValueError(f"Security Sandbox Violation: Path traversal attempt detected for project_id: {project_id}")
     return target_dir
 
-def create_workspace_directory(project_id: str) -> str:
+def create_workspace_directory(project_id: str) -> Dict[str, Any]:
     """
     Initializes a clean local filesystem workspace directory for a generated application.
-    
-    Args:
-        project_id: The unique project identifier.
-        
-    Returns:
-        Absolute path to the workspace directory.
+    Returns structured success or guided error instructions.
     """
-    project_dir = get_project_dir(project_id)
-    project_dir.mkdir(parents=True, exist_ok=True)
-    return str(project_dir)
+    try:
+        project_dir = get_project_dir(project_id)
+        project_dir.mkdir(parents=True, exist_ok=True)
+        return {
+            "status": "success",
+            "workspace_path": str(project_dir),
+            "message": f"Successfully initialized workspace directory for project '{project_id}'."
+        }
+    except ValueError as val_err:
+        return {
+            "status": "error",
+            "error_type": "SecurityViolation",
+            "error_message": str(val_err),
+            "recovery_instruction": "Sanitize project_id string to remove relative directory components ('..', '/', '\\') and re-call tool."
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error_type": "IOError",
+            "error_message": f"Failed to create workspace directory: {str(e)}",
+            "recovery_instruction": "Ensure write permissions exist for generated-apps directory and retry creation."
+        }
 
-def write_file(project_id: str, relative_path: str, content: str) -> str:
+def write_file(project_id: str, relative_path: str, content: str) -> Dict[str, Any]:
     """
     Creates or writes content to a file safely within the project's sandbox directory.
-    
-    Args:
-        project_id: The unique project identifier.
-        relative_path: Path relative to the project directory (e.g., 'src/App.jsx' or 'index.html').
-        content: The code or string content to write into the file.
-        
-    Returns:
-        Confirmation message with path.
+    Returns structured result with guided error recovery.
     """
-    project_dir = get_project_dir(project_id)
-    file_path = (project_dir / relative_path).resolve()
-    
-    if not str(file_path).startswith(str(project_dir)):
-        raise ValueError(f"Path traversal detected in relative_path: {relative_path}")
+    try:
+        project_dir = get_project_dir(project_id)
+        file_path = (project_dir / relative_path).resolve()
         
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-    file_path.write_text(content, encoding="utf-8")
-    return f"Successfully wrote file: {relative_path} ({len(content)} bytes)"
+        if not str(file_path).startswith(str(project_dir)):
+            return {
+                "status": "error",
+                "error_type": "PathTraversalViolation",
+                "error_message": f"Security Sandbox Violation: relative_path '{relative_path}' attempts to escape project directory.",
+                "recovery_instruction": "Ensure relative_path is a relative path inside the project workspace (e.g. 'src/App.jsx', 'index.html')."
+            }
+            
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(content, encoding="utf-8")
+        return {
+            "status": "success",
+            "file_path": relative_path,
+            "bytes_written": len(content),
+            "message": f"Successfully wrote file: {relative_path} ({len(content)} bytes)"
+        }
+    except ValueError as val_err:
+        return {
+            "status": "error",
+            "error_type": "InvalidProjectID",
+            "error_message": str(val_err),
+            "recovery_instruction": "Provide a valid alphanumeric project_id identifier."
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error_type": "FileWriteError",
+            "error_message": f"Could not write file '{relative_path}': {str(e)}",
+            "recovery_instruction": "Check disk space and filesystem write permissions, then retry file writing step."
+        }
 
-def scaffold_base_template(project_id: str, app_name: str, tagline: str) -> str:
+def scaffold_base_template(project_id: str, app_name: str, tagline: str) -> Dict[str, Any]:
     """
     Scaffolds base React/HTML single-page app boilerplate including package manifest, index.html, and CSS design system.
-    
-    Args:
-        project_id: The unique project identifier.
-        app_name: Name of the application.
-        tagline: Tagline or description.
-        
-    Returns:
-        Status message.
     """
-    create_workspace_directory(project_id)
-    
-    # 1. package.json
-    package_json = {
-        "name": app_name.lower().replace(" ", "-"),
-        "version": "1.0.0",
-        "description": tagline,
-        "main": "index.html",
-        "scripts": {
-            "start": "serve ."
-        },
-        "dependencies": {
-            "react": "^18.2.0",
-            "react-dom": "^18.2.0",
-            "lucide-react": "^0.263.1"
+    try:
+        ws_res = create_workspace_directory(project_id)
+        if ws_res.get("status") == "error":
+            return ws_res
+        
+        # 1. package.json
+        package_json = {
+            "name": app_name.lower().replace(" ", "-"),
+            "version": "1.0.0",
+            "description": tagline,
+            "main": "index.html",
+            "scripts": {
+                "start": "serve ."
+            },
+            "dependencies": {
+                "react": "^18.2.0",
+                "react-dom": "^18.2.0",
+                "lucide-react": "^0.263.1"
+            }
         }
-    }
-    write_file(project_id, "package.json", json.dumps(package_json, indent=2))
-    
-    # 2. styles.css - High Quality Design Tokens
-    styles_css = """/* Base Design Tokens & Reset */
+        write_file(project_id, "package.json", json.dumps(package_json, indent=2))
+        
+        # 2. styles.css - High Quality Design Tokens
+        styles_css = """/* Base Design Tokens & Reset */
 :root {
   --bg-primary: #090d16;
   --bg-card: rgba(15, 23, 42, 0.75);
@@ -114,7 +143,6 @@ body {
   min-height: 100vh;
 }
 
-/* Common UI Components */
 .btn {
   background: var(--accent-gradient);
   color: #fff;
@@ -157,10 +185,10 @@ body {
   font-weight: 500;
 }
 """
-    write_file(project_id, "styles.css", styles_css)
+        write_file(project_id, "styles.css", styles_css)
 
-    # 3. index.html - Live React Render Container with Error Boundary
-    index_html = f"""<!DOCTYPE html>
+        # 3. index.html
+        index_html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -174,7 +202,6 @@ body {
 <body>
   <div id="root"></div>
 
-  <!-- Runtime Error Catching -->
   <div id="error-boundary" style="display:none; padding: 2rem; color: #ef4444; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 8px; margin: 2rem;">
     <h3>Prototype Runtime Warning</h3>
     <pre id="error-message"></pre>
@@ -194,29 +221,20 @@ body {
 </body>
 </html>
 """
-    write_file(project_id, "index.html", index_html)
+        write_file(project_id, "index.html", index_html)
 
-    # 4. src/App.jsx default fallback
-    app_jsx = f"""const {{ useState, useEffect }} = React;
+        # 4. src/App.jsx default fallback
+        app_jsx = f"""const {{ useState }} = React;
 
 function App() {{
-  const [activeTab, setActiveTab] = useState('overview');
-
   return (
     <div style={{{{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}}}>
-      <header style={{{{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '1px solid rgba(255,255,255,0.1)', pb: '1rem' }}}}>
-        <div>
-          <h1 style={{{{ fontSize: '2rem', background: 'linear-gradient(135deg, #60a5fa, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}}}>{app_name}</h1>
-          <p style={{{{ color: '#94a3b8' }}}}>{tagline}</p>
-        </div>
+      <header style={{{{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}}}>
+        <h1 style={{{{ fontSize: '2rem', color: '#60a5fa' }}}}>{app_name}</h1>
         <button className="btn">Get Started</button>
       </header>
-
-      <main className="card" style={{{{ textAlign: 'center', padding: '4rem 2rem' }}}}>
-        <h2 style={{{{ marginBottom: '1rem' }}}}>Welcome to {app_name}</h2>
-        <p style={{{{ color: '#94a3b8', maxWidth: '600px', margin: '0 auto 2rem auto' }}}}>
-          This dynamic interactive prototype was autonomously generated based on deep market analysis and product specs.
-        </p>
+      <main className="card">
+        <p>{tagline}</p>
       </main>
     </div>
   );
@@ -224,36 +242,41 @@ function App() {{
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 """
-    write_file(project_id, "src/App.jsx", app_jsx)
-    
-    return f"Base scaffold created for {app_name} ({project_id})"
+        write_file(project_id, "src/App.jsx", app_jsx)
+        
+        return {
+            "status": "success",
+            "message": f"Base scaffold created for {app_name} ({project_id})"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error_type": "ScaffoldError",
+            "error_message": f"Scaffold creation failed: {str(e)}",
+            "recovery_instruction": "Ensure clean workspace path and retry scaffold_base_template."
+        }
 
 def generate_manifest(project_id: str) -> List[FileManifestItem]:
     """
-    Scans the workspace directory for a project and builds a file manifest.
-    
-    Args:
-        project_id: The unique project identifier.
-        
-    Returns:
-        List of FileManifestItem objects.
+    Scans workspace directory for a project and builds a file manifest.
     """
-    project_dir = get_project_dir(project_id)
     manifest = []
-    
-    if not project_dir.exists():
-        return manifest
-        
-    for root, dirs, files in os.walk(project_dir):
-        for file in files:
-            full_path = Path(root) / file
-            rel_path = str(full_path.relative_to(project_dir))
-            size = full_path.stat().st_size
-            ext = full_path.suffix.lstrip(".").lower() or "txt"
-            manifest.append(FileManifestItem(
-                file_path=rel_path,
-                file_size_bytes=size,
-                file_type=ext
-            ))
+    try:
+        project_dir = get_project_dir(project_id)
+        if not project_dir.exists():
+            return manifest
             
+        for root, dirs, files in os.walk(project_dir):
+            for file in files:
+                full_path = Path(root) / file
+                rel_path = str(full_path.relative_to(project_dir))
+                size = full_path.stat().st_size
+                ext = full_path.suffix.lstrip(".").lower() or "txt"
+                manifest.append(FileManifestItem(
+                    file_path=rel_path,
+                    file_size_bytes=size,
+                    file_type=ext
+                ))
+    except Exception:
+        pass
     return manifest

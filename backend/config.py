@@ -15,4 +15,17 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", os.getenv("GEMINI_API_KEY", ""))
 GOOGLE_SEARCH_API_KEY = os.getenv("GOOGLE_SEARCH_API_KEY", "")
 GOOGLE_SEARCH_CX = os.getenv("GOOGLE_SEARCH_CX", "")
 
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gemini-2.5-flash")
+# Strategic Model Routing Architecture
+FAST_MODEL = os.getenv("FAST_MODEL", "gemini-2.5-flash")
+REASONING_MODEL = os.getenv("REASONING_MODEL", "gemini-2.5-pro")
+
+def get_model_for_agent(agent_name: str) -> str:
+    """
+    Strategic model routing: Uses lightweight fast model for search query generation & discovery,
+    and high-reasoning model for complex product ideation and code generation.
+    """
+    if agent_name in ["Discovery", "Search"]:
+        return FAST_MODEL
+    elif agent_name in ["MarketResearch", "Ideation", "Implementation"]:
+        return REASONING_MODEL
+    return FAST_MODEL

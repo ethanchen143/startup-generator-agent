@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  agent-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_SEARCH_API_KEY=${GOOGLE_SEARCH_API_KEY}
+      - GOOGLE_SEARCH_CX=${GOOGLE_SEARCH_CX}
+      - FAST_MODEL=gemini-2.5-flash
+      - REASONING_MODEL=gemini-2.5-pro
+    volumes:
+      - ./logs:/app/logs
+      - ./generated-apps:/app/generated-apps
+    restart: unless-stopped
