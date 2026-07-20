@@ -1,0 +1,110 @@
+{
+  "project_id": "idea-e07b377c",
+  "timestamp": "2026-07-20T15:21:49.975759",
+  "discovery": {
+    "project_id": "idea-e07b377c",
+    "timestamp": "2026-07-20T15:21:49.975759",
+    "target_industry": "Automated Compliance & Telemetry for Remote Health Tech",
+    "uncovered_pain_point": "Fragmented manual processes and lack of real-time telemetry streaming in Automated Compliance & Telemetry for Remote Health Tech.",
+    "target_demographic": "Operations Managers and SMB Founders",
+    "opportunity_score": 8.7,
+    "search_queries_used": [
+      "Automated Compliance & Telemetry for Remote Health Tech pain points",
+      "market gaps 2026"
+    ]
+  },
+  "market_research": {
+    "project_id": "idea-e07b377c",
+    "competitors": [
+      {
+        "name": "LegacyCorp Analytics",
+        "url": "https://legacycorp.example.com",
+        "key_weakness": "Clunky static UI, expensive enterprise lock-in",
+        "market_share_estimate": "35%"
+      },
+      {
+        "name": "ManualSheet Tools",
+        "url": "https://manualsheet.example.com",
+        "key_weakness": "Requires manual export, no automated workflow",
+        "market_share_estimate": "25%"
+      }
+    ],
+    "market_size_tam": "$4.5 Billion",
+    "market_size_sam": "$850 Million",
+    "key_market_trends": [
+      "Shift toward real-time telemetry",
+      "Demand for low-code automation",
+      "API-first integration"
+    ],
+    "target_persona_insights": "Mid-market team leads seeking instant visibility without complex 6-month deployment cycles.",
+    "differentiation_angle": "Real-time WebSocket event streaming paired with single-click interactive prototype execution."
+  },
+  "product_spec": {
+    "project_id": "idea-e07b377c",
+    "app_name": "AutomatedFlow AI",
+    "tagline": "Next-Generation Autonomous Engine for Automated Compliance & Telemetry for Remote Health Tech",
+    "value_proposition": "Transform raw operational friction in Automated Compliance & Telemetry for Remote Health Tech into real-time interactive intelligence.",
+    "core_feature_list": [
+      {
+        "feature_name": "Live Telemetry Dashboard",
+        "description": "Real-time event stream monitoring and status metrics.",
+        "priority": "HIGH"
+      },
+      {
+        "feature_name": "Automated Opportunity Radar",
+        "description": "AI agent recommendation feed highlighting high-value gaps.",
+        "priority": "HIGH"
+      },
+      {
+        "feature_name": "One-Click Workspace Export",
+        "description": "Export generated manifests and source code instantly.",
+        "priority": "MEDIUM"
+      }
+    ],
+    "ui_ux_requirements": {
+      "color_palette": [
+        "#0f172a",
+        "#3b82f6",
+        "#10b981",
+        "#8b5cf6"
+      ],
+      "layout_style": "Modern High-Tech Cyberpunk Dashboard",
+      "typography_vibe": "Clean Inter / Roboto Sans"
+    },
+    "data_model_sketch": [
+      "ProjectRecord",
+      "TraceEvent",
+      "MarketMetric",
+      "UserWorkspace"
+    ]
+  },
+  "build_artifact": {
+    "project_id": "idea-e07b377c",
+    "workspace_path": "/Users/ethanjchen/Desktop/5-days-agent/generated-apps/idea-e07b377c",
+    "live_preview_url": "/preview/idea-e07b377c/index.html",
+    "file_manifest": [
+      {
+        "file_path": "index.html",
+        "file_size_bytes": 1209,
+        "file_type": "html"
+      },
+      {
+        "file_path": "styles.css",
+        "file_size_bytes": 1545,
+        "file_type": "css"
+      },
+      {
+        "file_path": "package.json",
+        "file_size_bytes": 343,
+        "file_type": "json"
+      },
+      {
+        "file_path": "src/App.jsx",
+        "file_size_bytes": 6165,
+        "file_type": "jsx"
+      }
+    ],
+    "build_status": "SUCCESS",
+    "generation_time_seconds": 0.0
+  }
+}

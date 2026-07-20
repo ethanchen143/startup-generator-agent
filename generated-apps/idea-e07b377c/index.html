@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutomatedFlow AI - Prototype</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Runtime Error Catching -->
+  <div id="error-boundary" style="display:none; padding: 2rem; color: #ef4444; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 8px; margin: 2rem;">
+    <h3>Prototype Runtime Warning</h3>
+    <pre id="error-message"></pre>
+  </div>
+
+  <script>
+    window.onerror = function(msg, url, line) {
+      const errBox = document.getElementById('error-boundary');
+      if (errBox) {
+        errBox.style.display = 'block';
+        document.getElementById('error-message').textContent = msg + ' (Line ' + line + ')';
+      }
+    };
+  </script>
+
+  <script type="text/babel" src="src/App.jsx"></script>
+</body>
+</html>

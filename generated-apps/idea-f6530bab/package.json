@@ -1,0 +1,14 @@
+{
+  "name": "creatorflow-ai",
+  "version": "1.0.0",
+  "description": "Next-Generation Autonomous Engine for Creator Economy Dynamic Contract & Royalty Distribution",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve ."
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "lucide-react": "^0.263.1"
+  }
+}
