@@ -4,12 +4,14 @@ import json
 import uuid
 import datetime
 from pathlib import Path
-from typing import Optional, List, Callable, Dict, Any
+from typing import Optional, List, Callable, Dict, Any, Type
 
 from google import genai
 from google.genai import types
+from pydantic import BaseModel
 
 from backend.config import GENERATED_APPS_DIR, GOOGLE_API_KEY, get_model_for_agent
+from backend.constitution import AGENT_CONSTITUTION
 from backend.schemas import (
     DiscoveryResult, CompetitorInfo, MarketResearchReport,
     FeatureSpec, UIUXRequirements, ProductSpec,
@@ -32,7 +34,6 @@ class AgentPipeline:
         self.genai_client = genai.Client(api_key=GOOGLE_API_KEY) if GOOGLE_API_KEY else None
 
     def _emit_trace(self, project_id: str, agent_name: str, event_type: str, content: str):
-        # 1. PII Redaction
         scrubbed_content = redact_pii(content)
 
         event = TraceEvent(
@@ -40,10 +41,9 @@ class AgentPipeline:
             agent_name=agent_name,
             event_type=event_type,
             content=scrubbed_content,
-            timestamp=datetime.datetime.utcnow().isoformat() + "Z"
+            timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat()
         )
         
-        # 2. Structured JSON Logging
         pipeline_logger.info(
             scrubbed_content,
             extra={
@@ -59,12 +59,18 @@ class AgentPipeline:
             except Exception as e:
                 print(f"Error emitting trace event: {e}")
 
-    def _call_llm(self, agent_name: str, prompt: str, default_fallback: str) -> str:
+    def _call_llm(
+        self,
+        agent_name: str,
+        prompt: str,
+        default_fallback: str,
+        response_schema: Optional[Type[BaseModel]] = None
+    ) -> str:
         """
         Invokes defined LLM agent using strategic model routing (Fast Model vs Reasoning Model).
+        Directly constrains output with Pydantic JSON schemas via response_schema configuration.
         Includes input/output security guardrails and fallback resilience.
         """
-        # Guardrail check input prompt
         safety_check = validate_input_safety(prompt)
         if not safety_check.get("safe"):
             self._emit_trace("SYSTEM", agent_name, "STATUS_CHANGE", f"Guardrail Alert: {safety_check.get('reason')}")
@@ -75,17 +81,25 @@ class AgentPipeline:
 
         model_name = get_model_for_agent(agent_name)
         try:
+            full_prompt = f"{AGENT_CONSTITUTION}\n\nTask Instructions:\n{prompt}"
+            
+            config_kwargs: Dict[str, Any] = {
+                "temperature": 0.7,
+                "max_output_tokens": 1500
+            }
+            
+            # Constrain LLM output directly with explicit Pydantic JSON Schema if provided
+            if response_schema:
+                config_kwargs["response_mime_type"] = "application/json"
+                config_kwargs["response_schema"] = response_schema
+
             response = self.genai_client.models.generate_content(
                 model=model_name,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    temperature=0.7,
-                    max_output_tokens=1500
-                )
+                contents=full_prompt,
+                config=types.GenerateContentConfig(**config_kwargs)
             )
             out_text = response.text if response and response.text else default_fallback
             
-            # Guardrail check output
             out_safety = validate_output_safety(out_text)
             if not out_safety.get("safe"):
                 self._emit_trace("SYSTEM", agent_name, "STATUS_CHANGE", f"Guardrail Alert on Output: {out_safety.get('reason')}")
@@ -100,20 +114,19 @@ class AgentPipeline:
         if not project_id:
             project_id = f"idea-{uuid.uuid4().hex[:8]}"
             
-        timestamp = datetime.datetime.utcnow().isoformat() + "Z"
+        timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
         start_time = time.time()
         trace_events_log: List[Dict[str, Any]] = []
 
         self._emit_trace(project_id, "Pipeline", "STATUS_CHANGE", f"Starting 4-Agent Pipeline for Project ID: {project_id}")
 
-        # Initialize or Load Persistent Session State
         session_state = {
             "project_id": project_id,
             "status": "RUNNING",
             "start_time": start_time
         }
         turn_history: List[Dict[str, Any]] = [
-            {"role": "system", "content": "You are an autonomous multi-agent startup generator pipeline adhering to strict product & market criteria."}
+            {"role": "system", "content": f"AGENT CONSTITUTION:\n{AGENT_CONSTITUTION}"}
         ]
 
         # ------------------- 1. DISCOVERY AGENT -------------------
@@ -133,28 +146,28 @@ class AgentPipeline:
             self._emit_trace(project_id, "Discovery", "TOOL_QUERY", f"Executing web search for unserved market pain points in '{chosen_industry}'...")
             search_json = google_search_wrapper(f"{chosen_industry} pain points market opportunities 2026")
             
-            self._emit_trace(project_id, "Discovery", "THOUGHT", f"Invoking LLM Discovery Agent with Fast Model ({get_model_for_agent('Discovery')}) to analyze market signals.")
+            self._emit_trace(project_id, "Discovery", "THOUGHT", f"Invoking LLM Discovery Agent with Fast Model ({get_model_for_agent('Discovery')}) and Pydantic JSON Schema response constraint.")
             
             discovery_prompt = f"""
             Analyze these web search results for the industry '{chosen_industry}':
             {search_json}
             
-            Return a JSON object with keys:
-            - uncovered_pain_point (string)
-            - target_demographic (string)
-            - opportunity_score (float between 7.0 and 9.5)
+            Synthesize market signals and populate the DiscoveryResult schema for project_id '{project_id}'.
             """
             
             disc_fallback = json.dumps({
+                "project_id": project_id,
+                "timestamp": timestamp,
+                "target_industry": chosen_industry,
                 "uncovered_pain_point": f"Fragmented manual processes and lack of real-time telemetry streaming in {chosen_industry}.",
                 "target_demographic": "Operations Managers and SMB Founders",
-                "opportunity_score": 8.7
+                "opportunity_score": 8.7,
+                "search_queries_used": [f"{chosen_industry} pain points", "market gaps 2026"]
             })
             
-            llm_disc_res = self._call_llm("Discovery", discovery_prompt, disc_fallback)
+            llm_disc_res = self._call_llm("Discovery", discovery_prompt, disc_fallback, response_schema=DiscoveryResult)
             
             try:
-                # Extract JSON from LLM output
                 clean_json_str = llm_disc_res[llm_disc_res.find('{'):llm_disc_res.rfind('}')+1]
                 disc_parsed = json.loads(clean_json_str)
             except Exception:
@@ -185,34 +198,29 @@ class AgentPipeline:
             self._emit_trace(project_id, "MarketResearch", "TOOL_QUERY", f"Searching competitors for {discovery_data.target_industry}...")
             
             mr_search = google_search_wrapper(f"{chosen_industry} top competitors TAM SAM market size")
-            self._emit_trace(project_id, "MarketResearch", "THOUGHT", f"Invoking LLM Market Research Agent ({get_model_for_agent('MarketResearch')}) to synthesize competitor gaps & addressable market.")
+            self._emit_trace(project_id, "MarketResearch", "THOUGHT", f"Invoking LLM Market Research Agent ({get_model_for_agent('MarketResearch')}) with Pydantic MarketResearchReport JSON Schema constraint.")
             
             mr_prompt = f"""
             Based on industry '{chosen_industry}' and research:
             {mr_search}
             
-            Synthesize market size and competitor weaknesses.
-            Return JSON with keys:
-            - competitor_1_name, competitor_1_weakness
-            - competitor_2_name, competitor_2_weakness
-            - market_size_tam (e.g. '$4.5 Billion')
-            - market_size_sam (e.g. '$850 Million')
-            - target_persona_insights
-            - differentiation_angle
+            Synthesize market size and competitor weaknesses adhering to MarketResearchReport schema.
             """
             
             mr_fallback = json.dumps({
-                "competitor_1_name": "LegacyCorp Analytics",
-                "competitor_1_weakness": "Clunky static UI, expensive enterprise lock-in",
-                "competitor_2_name": "ManualSheet Tools",
-                "competitor_2_weakness": "Requires manual export, no automated workflow",
+                "project_id": project_id,
+                "competitors": [
+                    {"name": "LegacyCorp Analytics", "url": "https://legacycorp.example.com", "key_weakness": "Clunky static UI, expensive enterprise lock-in", "market_share_estimate": "35%"},
+                    {"name": "ManualSheet Tools", "url": "https://manualsheet.example.com", "key_weakness": "Requires manual export, no automated workflow", "market_share_estimate": "25%"}
+                ],
                 "market_size_tam": "$4.5 Billion",
                 "market_size_sam": "$850 Million",
+                "key_market_trends": ["Shift toward real-time telemetry", "Demand for low-code automation"],
                 "target_persona_insights": "Mid-market team leads seeking instant visibility without complex 6-month deployment cycles.",
                 "differentiation_angle": "Real-time WebSocket event streaming paired with single-click interactive prototype execution."
             })
             
-            llm_mr_res = self._call_llm("MarketResearch", mr_prompt, mr_fallback)
+            llm_mr_res = self._call_llm("MarketResearch", mr_prompt, mr_fallback, response_schema=MarketResearchReport)
             try:
                 clean_json_str = llm_mr_res[llm_mr_res.find('{'):llm_mr_res.rfind('}')+1]
                 mr_parsed = json.loads(clean_json_str)
@@ -222,12 +230,15 @@ class AgentPipeline:
             market_research_data = MarketResearchReport(
                 project_id=project_id,
                 competitors=[
-                    CompetitorInfo(name=mr_parsed.get("competitor_1_name", "LegacyCorp Analytics"), url="https://legacycorp.example.com", key_weakness=mr_parsed.get("competitor_1_weakness", "Expensive enterprise lock-in"), market_share_estimate="35%"),
-                    CompetitorInfo(name=mr_parsed.get("competitor_2_name", "ManualSheet Tools"), url="https://manualsheet.example.com", key_weakness=mr_parsed.get("competitor_2_weakness", "No automated streaming workflow"), market_share_estimate="25%")
+                    CompetitorInfo(name=c.get("name", "LegacyCorp"), url=c.get("url", ""), key_weakness=c.get("key_weakness", "Expensive lock-in"), market_share_estimate=c.get("market_share_estimate", "35%"))
+                    for c in mr_parsed.get("competitors", [])
+                ] or [
+                    CompetitorInfo(name="LegacyCorp Analytics", url="https://legacycorp.example.com", key_weakness="Clunky static UI, expensive enterprise lock-in", market_share_estimate="35%"),
+                    CompetitorInfo(name="ManualSheet Tools", url="https://manualsheet.example.com", key_weakness="Requires manual export, no automated workflow", market_share_estimate="25%")
                 ],
                 market_size_tam=mr_parsed.get("market_size_tam", "$4.5 Billion"),
                 market_size_sam=mr_parsed.get("market_size_sam", "$850 Million"),
-                key_market_trends=["Shift toward real-time telemetry", "Demand for low-code automation", "API-first integration"],
+                key_market_trends=mr_parsed.get("key_market_trends", ["Shift toward real-time telemetry"]),
                 target_persona_insights=mr_parsed.get("target_persona_insights", "Mid-market team leads seeking instant visibility."),
                 differentiation_angle=mr_parsed.get("differentiation_angle", "Real-time WebSocket streaming paired with instant prototype execution.")
             )
@@ -244,7 +255,7 @@ class AgentPipeline:
         span_ideo = start_agent_span("Ideation", project_id)
         try:
             self._emit_trace(project_id, "Ideation", "STATUS_CHANGE", "Synthesizing research into dynamic Product Specification...")
-            self._emit_trace(project_id, "Ideation", "THOUGHT", f"Invoking LLM Ideation Agent ({get_model_for_agent('Ideation')}) to blueprint React UX layout & features.")
+            self._emit_trace(project_id, "Ideation", "THOUGHT", f"Invoking LLM Ideation Agent ({get_model_for_agent('Ideation')}) with Pydantic ProductSpec JSON Schema constraint.")
             
             app_name_parts = chosen_industry.split()
             app_name = f"{app_name_parts[0]}Flow AI"
@@ -267,7 +278,6 @@ class AgentPipeline:
                 data_model_sketch=["ProjectRecord", "TraceEvent", "MarketMetric", "UserWorkspace"]
             )
             
-            # Human-In-The-Loop (HITL) Hook Checkpoint
             self._emit_trace(project_id, "Ideation", "STATUS_CHANGE", "Requesting Human-In-The-Loop (HITL) confirmation for ProductSpec approval...")
             await hitl_manager.wait_for_approval(project_id, "ProductSpecApproval", product_spec_data.model_dump())
             self._emit_trace(project_id, "Ideation", "STATUS_CHANGE", f"ProductSpec approved for '{app_name}'. Ready for Implementation.")
@@ -279,11 +289,9 @@ class AgentPipeline:
         try:
             self._emit_trace(project_id, "Implementation", "STATUS_CHANGE", f"Scaffolding React project sandbox at /generated-apps/{project_id}/...")
             
-            # 4a. Scaffold base
             scaffold_res = scaffold_base_template(project_id, product_spec_data.app_name, product_spec_data.tagline)
             self._emit_trace(project_id, "Implementation", "TOOL_EXECUTION", str(scaffold_res))
             
-            # 4b. Write rich, interactive App.jsx for prototype
             self._emit_trace(project_id, "Implementation", "THOUGHT", f"Invoking LLM Implementation Agent ({get_model_for_agent('Implementation')}) to generate React prototype code.")
             
             features_json = json.dumps([f.model_dump() for f in product_spec_data.core_feature_list])
@@ -409,7 +417,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App />);
             w_res = write_file(project_id, "src/App.jsx", rich_app_jsx)
             self._emit_trace(project_id, "Implementation", "TOOL_EXECUTION", str(w_res))
             
-            # 4c. Generate Manifest
             manifest_items = generate_manifest(project_id)
             generation_time = round(time.time() - start_time, 2)
             
@@ -438,11 +445,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App />);
             build_artifact=build_artifact
         )
 
-        # Save package_metadata.json in project directory
         pkg_file = GENERATED_APPS_DIR / project_id / "package_metadata.json"
         pkg_file.write_text(package.model_dump_json(indent=2), encoding="utf-8")
         
-        # Save Session State & Trigger Async Memory Consolidation
         session_state["status"] = "COMPLETED"
         session_store.save_session(project_id, session_state, turn_history)
         await consolidate_memory_async(project_id, trace_events_log)

@@ -6,6 +6,18 @@ from backend.config import GENERATED_APPS_DIR
 from backend.schemas import FileManifestItem
 
 def get_project_dir(project_id: str) -> Path:
+    """
+    Resolves and validates the workspace directory path for a given project identifier.
+    
+    Args:
+        project_id (str): The unique identifier for the project workspace.
+        
+    Returns:
+        Path: Resolved absolute Path object pointing to the project directory.
+        
+    Raises:
+        ValueError: If project_id is invalid or attempts path traversal outside GENERATED_APPS_DIR.
+    """
     if not project_id or not isinstance(project_id, str):
         raise ValueError("Invalid or empty project_id provided.")
     target_dir = (GENERATED_APPS_DIR / project_id).resolve()
@@ -17,7 +29,12 @@ def get_project_dir(project_id: str) -> Path:
 def create_workspace_directory(project_id: str) -> Dict[str, Any]:
     """
     Initializes a clean local filesystem workspace directory for a generated application.
-    Returns structured success or guided error instructions.
+    
+    Args:
+        project_id (str): The unique project identifier.
+        
+    Returns:
+        Dict[str, Any]: Structured outcome containing status ('success' or 'error'), workspace_path, and guided recovery instructions.
     """
     try:
         project_dir = get_project_dir(project_id)
@@ -45,7 +62,14 @@ def create_workspace_directory(project_id: str) -> Dict[str, Any]:
 def write_file(project_id: str, relative_path: str, content: str) -> Dict[str, Any]:
     """
     Creates or writes content to a file safely within the project's sandbox directory.
-    Returns structured result with guided error recovery.
+    
+    Args:
+        project_id (str): The unique project identifier.
+        relative_path (str): Relative file path within the workspace (e.g. 'src/App.jsx', 'index.html').
+        content (str): The string or code content to write into the destination file.
+        
+    Returns:
+        Dict[str, Any]: Structured dictionary result containing file_path, bytes_written, status, and guided error recovery instructions.
     """
     try:
         project_dir = get_project_dir(project_id)
@@ -85,6 +109,14 @@ def write_file(project_id: str, relative_path: str, content: str) -> Dict[str, A
 def scaffold_base_template(project_id: str, app_name: str, tagline: str) -> Dict[str, Any]:
     """
     Scaffolds base React/HTML single-page app boilerplate including package manifest, index.html, and CSS design system.
+    
+    Args:
+        project_id (str): The unique project identifier.
+        app_name (str): Human-readable name of the application.
+        tagline (str): Short marketing description or value proposition tagline.
+        
+    Returns:
+        Dict[str, Any]: Execution status dictionary with created file count and guided error recovery instructions.
     """
     try:
         ws_res = create_workspace_directory(project_id)
@@ -258,7 +290,13 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 
 def generate_manifest(project_id: str) -> List[FileManifestItem]:
     """
-    Scans workspace directory for a project and builds a file manifest.
+    Scans the workspace directory for a project and builds a file manifest.
+    
+    Args:
+        project_id (str): The unique project identifier.
+        
+    Returns:
+        List[FileManifestItem]: List of FileManifestItem objects representing created workspace assets.
     """
     manifest = []
     try:

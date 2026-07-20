@@ -6,18 +6,18 @@ from backend.config import GOOGLE_SEARCH_API_KEY, GOOGLE_SEARCH_CX
 def google_search_wrapper(query: str) -> str:
     """
     Performs a web search to discover market trends, competitor information, or industry pain points.
-    Includes guided error handling to return recovery instructions rather than raising unhandled exceptions.
+    Provides structured result signals and guided error handling for LLM tool integration.
     
     Args:
-        query: The search query string.
+        query (str): The search query string representing industry keywords, competitors, or pain points.
         
     Returns:
-        A JSON string containing search result snippets or structured error recovery instructions.
+        str: A JSON string containing search result snippets (title, snippet, link) or structured recovery instructions on error.
     """
     if not query or not isinstance(query, str) or len(query.strip()) == 0:
         return json.dumps({
             "status": "error",
-            "error_message": "Search query was empty or invalid.",
+            "error_message": "Search query parameter 'query' was empty or invalid.",
             "recovery_instruction": "Provide a descriptive non-empty search query string (e.g. 'niche logistics software pain points 2026')."
         }, indent=2)
 
@@ -42,7 +42,6 @@ def google_search_wrapper(query: str) -> str:
                     "results": results
                 }, indent=2)
             else:
-                # Guided error recovery for API non-200 responses
                 return json.dumps({
                     "status": "error",
                     "error_code": res.status_code,

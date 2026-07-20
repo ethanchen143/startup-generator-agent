@@ -15,11 +15,11 @@ function App() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <h1 style={{ fontSize: '2.2rem', fontWeight: 800, background: 'linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              SustainableFlow AI
+              CommercialFlow AI
             </h1>
-            <span className="tag">Sustainable Supply Chain Analytics for Micro-Brands</span>
+            <span className="tag">Commercial Property Energy Optimization SaaS</span>
           </div>
-          <p style={{ color: '#94a3b8', marginTop: '0.5rem', fontSize: '1.05rem' }}>Next-Generation Autonomous Engine for Sustainable Supply Chain Analytics for Micro-Brands</p>
+          <p style={{ color: '#94a3b8', marginTop: '0.5rem', fontSize: '1.05rem' }}>Next-Generation Autonomous Engine for Commercial Property Energy Optimization SaaS</p>
         </div>
         <button className="btn" onClick={() => alert('Live Prototype Action Executed!')}>
           Launch Demo Portal →

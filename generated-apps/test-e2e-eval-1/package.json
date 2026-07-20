@@ -1,7 +1,7 @@
 {
-  "name": "sustainableflow-ai",
+  "name": "commercialflow-ai",
   "version": "1.0.0",
-  "description": "Next-Generation Autonomous Engine for Sustainable Supply Chain Analytics for Micro-Brands",
+  "description": "Next-Generation Autonomous Engine for Commercial Property Energy Optimization SaaS",
   "main": "index.html",
   "scripts": {
     "start": "serve ."
